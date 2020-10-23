@@ -1,3 +1,5 @@
+import * as O from "@effect-ts/core/Classic/Option"
+
 import type { KeysDefinition } from "../utils"
 import { isIn } from "../utils"
 
@@ -67,6 +69,10 @@ interface MatcherWidenIntern<A, Record> {
     | (unknown extends ReturnType<D> ? never : ReturnType<D>)
 }
 
+interface MatcherSome<A, Tag extends keyof A> {
+  <R>(match: Partial<Cases<ValueByKeyByTag<A>[Tag], R>>): (a: A) => O.Option<R>
+}
+
 export interface Reducer<S, A> {
   (state: S | undefined, action: A): S
 }
@@ -75,6 +81,7 @@ export interface Matchers<A, Tag extends keyof A> {
   fold: Folder<A>
   transform: Transform<A, Tag>
   match: MatcherWiden<A, Tag>
+  matchSome: MatcherSome<A, Tag>
   matchStrict: MatcherStrict<A, Tag>
   createReducer: <S>(initialState: S) => ReducerBuilder<S, A, Tag>
   strict: <R>(f: (_: A) => R) => (_: A) => R
@@ -88,6 +95,10 @@ export const Matchers = <A, Tag extends keyof A>(tag: Tag) => (
   const transform = (match: any) => (a: any): any => {
     const c = match[a[tag]]
     return c ? c(a) : a
+  }
+  const matchSome = (match: any) => (a: any): any => {
+    const c = match[a[tag]]
+    return c ? c(a) : O.none
   }
   const fold = <A>(a: A) => a
   const createReducer = <S>(initialState: S): ReducerBuilder<S, A, Tag> => (
@@ -103,6 +114,7 @@ export const Matchers = <A, Tag extends keyof A>(tag: Tag) => (
   return {
     matchStrict: match,
     match,
+    matchSome,
     transform,
     fold,
     createReducer,
